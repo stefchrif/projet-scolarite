@@ -8,16 +8,25 @@ set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 # --- Détection de Java 21 -------------------------------------------------
-if ! command -v java >/dev/null 2>&1; then
-  if [ -d "/opt/homebrew/opt/openjdk@21" ]; then
-    export JAVA_HOME="/opt/homebrew/opt/openjdk@21"
-    export PATH="$JAVA_HOME/bin:$PATH"
-  elif [ -d "/usr/local/opt/openjdk@21" ]; then
-    export JAVA_HOME="/usr/local/opt/openjdk@21"
-    export PATH="$JAVA_HOME/bin:$PATH"
-  fi
+# NB : macOS fournit un stub /usr/bin/java qui "existe" sans être un vrai JDK.
+# On teste donc que `java -version` fonctionne réellement.
+java_works() { java -version >/dev/null 2>&1; }
+
+if ! java_works; then
+  for d in "/opt/homebrew/opt/openjdk@21" "/usr/local/opt/openjdk@21"; do
+    if [ -x "$d/bin/java" ]; then
+      export JAVA_HOME="$d"
+      export PATH="$JAVA_HOME/bin:$PATH"
+      break
+    fi
+  done
 fi
-if ! command -v java >/dev/null 2>&1; then
+# Dernier recours : laisser macOS trouver un JDK installé
+if ! java_works && [ -x "/usr/libexec/java_home" ]; then
+  JH="$(/usr/libexec/java_home 2>/dev/null || true)"
+  if [ -n "$JH" ]; then export JAVA_HOME="$JH"; export PATH="$JAVA_HOME/bin:$PATH"; fi
+fi
+if ! java_works; then
   echo "❌ Java introuvable. Installez le JDK 21 (ex: brew install openjdk@21)."
   exit 1
 fi
