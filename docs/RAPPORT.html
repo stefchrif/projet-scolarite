@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr" xml:lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>RAPPORT</title>
+  <style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+  <style type="text/css">body{font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:820px;margin:1.5rem auto;line-height:1.5;color:#1e293b;padding:0 1rem}
+h1,h2{color:#312e81} h1{border-bottom:3px solid #4f46e5;padding-bottom:.3rem}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.82rem}
+th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left} th{background:#eef2ff}
+pre{background:#f1f5f9;padding:.8rem;border-radius:8px;overflow:auto;font-size:.62rem;line-height:1.15;white-space:pre}
+code{font-family:ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<h1 id="rapport-technique-scolaritéapp">Rapport technique —
+ScolaritéApp</h1>
+<p><strong>Projet de fin de module : Spring</strong> Licence Génie
+Logiciel — Faculté des Sciences de Kénitra (UIT) — 2025-2026</p>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<p>Ce projet consiste à réimplémenter, avec l’écosystème <strong>Java /
+Spring</strong>, un cas d’usage de <strong>gestion de scolarité</strong>
+initialement proposé sous Django. L’application permet de gérer les
+<strong>étudiants</strong>, <strong>enseignants</strong>,
+<strong>filières</strong>, <strong>modules</strong>,
+<strong>inscriptions</strong> et <strong>notes</strong>, avec une
+authentification et une gestion fine des droits par rôle.</p>
+<p>Le projet est composé de deux parties :</p>
+<ul>
+<li>un <strong>backend Spring Boot</strong> exposant une <strong>API
+REST</strong> sécurisée par <strong>JWT</strong> ;</li>
+<li>un <strong>frontend React</strong> (TypeScript) qui consomme cette
+API.</li>
+</ul>
+<hr />
+<h2 id="architecture-générale">2. Architecture générale</h2>
+<p>L’application suit une architecture <strong>client / serveur
+découplée</strong> : le frontend et le backend sont deux applications
+indépendantes communiquant uniquement via HTTP/JSON.</p>
+<pre><code>┌──────────────────┐   HTTP/JSON + JWT   ┌────────────────────────┐   JPA/Hibernate   ┌──────────┐
+│  Frontend React  │ ──────────────────▶ │  Backend Spring Boot   │ ────────────────▶ │  Base de  │
+│  (Vite + TS)     │ ◀────────────────── │  API REST + Security   │                   │  données  │
+└──────────────────┘                     └────────────────────────┘                   └──────────┘</code></pre>
+<p>Le backend est lui-même organisé en <strong>couches</strong>
+(architecture en oignon classique) :</p>
+<pre><code>Controller  →  Service  →  Repository  →  Entity (JPA)
+   (REST)      (métier)    (Spring Data)    (tables)
+        ↘ DTO ↗          ↘ Base de données ↗</code></pre>
+<table>
+<colgroup>
+<col style="width: 34%" />
+<col style="width: 26%" />
+<col style="width: 39%" />
+</colgroup>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Rôle</th>
+<th>Exemple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Controller</strong></td>
+<td>Expose les endpoints REST, valide les entrées</td>
+<td><code>EtudiantController</code></td>
+</tr>
+<tr>
+<td><strong>Service</strong></td>
+<td>Logique métier, mapping Entity ↔︎ DTO</td>
+<td><code>EtudiantService</code></td>
+</tr>
+<tr>
+<td><strong>Repository</strong></td>
+<td>Accès aux données via Spring Data JPA</td>
+<td><code>EtudiantRepository</code></td>
+</tr>
+<tr>
+<td><strong>Entity</strong></td>
+<td>Représentation des tables</td>
+<td><code>Etudiant</code></td>
+</tr>
+<tr>
+<td><strong>DTO</strong></td>
+<td>Objets de transfert (jamais exposer les entités)</td>
+<td><code>EtudiantDto</code>, <code>EtudiantRequest</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="choix-techniques">3. Choix techniques</h2>
+<h3 id="backend">3.1 Backend</h3>
+<table>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 17%" />
+<col style="width: 44%" />
+</colgroup>
+<thead>
+<tr>
+<th>Technologie</th>
+<th>Rôle</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Spring Boot 3.3</strong></td>
+<td>Framework applicatif</td>
+<td>Standard de l’industrie, auto-configuration, démarrage rapide</td>
+</tr>
+<tr>
+<td><strong>Spring Web (MVC)</strong></td>
+<td>Exposition de l’API REST</td>
+<td>Annotations <code>@RestController</code>,
+<code>@RequestMapping</code></td>
+</tr>
+<tr>
+<td><strong>Spring Data JPA</strong></td>
+<td>Persistance</td>
+<td>Réduit le code d’accès aux données (repositories)</td>
+</tr>
+<tr>
+<td><strong>Spring Security + JWT</strong></td>
+<td>Authentification / autorisation</td>
+<td>Sécurité stateless adaptée à une API consommée par un SPA</td>
+</tr>
+<tr>
+<td><strong>Hibernate</strong></td>
+<td>ORM</td>
+<td>Implémentation JPA par défaut</td>
+</tr>
+<tr>
+<td><strong>H2 / MySQL</strong></td>
+<td>Base de données</td>
+<td>H2 pour le dev (zéro installation), MySQL pour la prod</td>
+</tr>
+<tr>
+<td><strong>springdoc-openapi</strong></td>
+<td>Documentation (Swagger)</td>
+<td>Documentation interactive auto-générée</td>
+</tr>
+<tr>
+<td><strong>Lombok</strong></td>
+<td>Réduction du boilerplate</td>
+<td>Génère getters/setters/builders</td>
+</tr>
+<tr>
+<td><strong>JUnit 5 + MockMvc</strong></td>
+<td>Tests</td>
+<td>Tests d’intégration des endpoints</td>
+</tr>
+</tbody>
+</table>
+<h3 id="frontend">3.2 Frontend</h3>
+<table>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 17%" />
+<col style="width: 44%" />
+</colgroup>
+<thead>
+<tr>
+<th>Technologie</th>
+<th>Rôle</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>React 19 + TypeScript</strong></td>
+<td>Bibliothèque UI</td>
+<td>Composants réutilisables, typage statique</td>
+</tr>
+<tr>
+<td><strong>Vite</strong></td>
+<td>Build / serveur de dev</td>
+<td>Démarrage instantané, proxy intégré</td>
+</tr>
+<tr>
+<td><strong>React Router</strong></td>
+<td>Navigation SPA</td>
+<td>Routes protégées par rôle</td>
+</tr>
+<tr>
+<td><strong>Axios</strong></td>
+<td>Client HTTP</td>
+<td>Intercepteurs (injection automatique du JWT)</td>
+</tr>
+<tr>
+<td><strong>Tailwind CSS</strong></td>
+<td>Style</td>
+<td>Interface moderne, rapide à développer</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="modèle-de-données">4. Modèle de données</h2>
+<h3 id="schéma-relationnel">4.1 Schéma relationnel</h3>
+<pre><code>                ┌──────────────┐
+                │   FILIERE    │
+                │──────────────│
+                │ id (PK)      │
+                │ nom          │
+                │ niveau       │
+                └──────┬───────┘
+            1          │           1
+       ┌───────────────┼────────────────┐
+       │ *             │ *               │
+┌──────▼───────┐  ┌────▼─────────┐  ┌────▼─────────┐
+│   ETUDIANT   │  │    MODULE    │  │  ENSEIGNANT  │
+│──────────────│  │──────────────│  │──────────────│
+│ id (PK)      │  │ id (PK)      │  │ id (PK)      │
+│ nom, prenom  │  │ code (unique)│  │ nom, prenom  │
+│ cne (unique) │  │ intitule     │  │ email        │
+│ email        │  │ semestre     │  │ specialite   │
+│ dateNaissance│  │ filiere_id FK│  └──────┬───────┘
+│ filiere_id FK│  │ enseignant_id├─────────┘ 1..*
+└──────┬───────┘  └──────┬───────┘
+       │ 1               │ 1
+       │                 │
+       │ *   ┌───────────▼────────┐  *
+       └────▶│    INSCRIPTION     │◀──────┐
+             │────────────────────│       │
+             │ id (PK)            │       │
+             │ etudiant_id FK     │       │
+             │ module_id FK       │       │
+             │ dateInscription    │       │
+             │ UNIQUE(etu,module) │       │
+             └──────────┬─────────┘       │
+                        │ 1               │
+                        │ *               │
+                 ┌──────▼───────┐         │
+                 │     NOTE     │         │
+                 │──────────────│         │
+                 │ id (PK)      │         │
+                 │ inscription_id FK──────┘
+                 │ valeur (/20) │
+                 │ type (CC/EXAM)│
+                 └──────────────┘
+
+      ┌──────────────┐
+      │     USER     │  (authentification)
+      │──────────────│
+      │ id (PK)      │
+      │ username UQ  │
+      │ password     │  (haché BCrypt)
+      │ nomComplet   │
+      │ role (ENUM)  │  ADMIN | ENSEIGNANT | ETUDIANT
+      └──────────────┘</code></pre>
+<h3 id="relations-principales">4.2 Relations principales</h3>
+<ul>
+<li>Une <strong>Filière</strong> contient plusieurs
+<strong>Étudiants</strong> et plusieurs <strong>Modules</strong>
+(1..*).</li>
+<li>Un <strong>Enseignant</strong> est responsable de plusieurs
+<strong>Modules</strong> (1..*).</li>
+<li>L’<strong>Inscription</strong> matérialise l’association
+<em>plusieurs-à-plusieurs</em> entre <strong>Étudiant</strong> et
+<strong>Module</strong> (contrainte d’unicité sur le couple).</li>
+<li>Une <strong>Note</strong> est rattachée à une
+<strong>Inscription</strong> (donc à un couple étudiant/module).</li>
+<li>Le <strong>User</strong> porte l’authentification et le
+<strong>rôle</strong>.</li>
+</ul>
+<hr />
+<h2 id="sécurité">5. Sécurité</h2>
+<p>L’authentification est <strong>stateless</strong> et repose sur des
+<strong>JSON Web Tokens (JWT)</strong>.</p>
+<ol type="1">
+<li>L’utilisateur s’authentifie via
+<code>POST /api/auth/login</code>.</li>
+<li>Le serveur vérifie les identifiants (mot de passe haché avec
+<strong>BCrypt</strong>) et renvoie un <strong>token JWT</strong> signé
+(HMAC) contenant le nom d’utilisateur et le rôle.</li>
+<li>À chaque requête, le frontend envoie le token dans l’en-tête
+<code>Authorization: Bearer &lt;token&gt;</code>.</li>
+<li>Un filtre <code>JwtAuthenticationFilter</code> (exécuté une fois par
+requête) valide le token et place l’utilisateur dans le
+<code>SecurityContext</code>.</li>
+<li>Les autorisations par rôle sont appliquées via
+<code>@PreAuthorize</code> sur les méthodes des contrôleurs (ex. seul
+<code>ADMIN</code> peut créer un étudiant ; <code>ADMIN</code> et
+<code>ENSEIGNANT</code> peuvent saisir des notes).</li>
+</ol>
+<p><strong>Gestion des erreurs</strong> : un
+<code>GlobalExceptionHandler</code> (<code>@RestControllerAdvice</code>)
+transforme les exceptions en réponses JSON cohérentes (404, 400 +
+erreurs de validation, 401).</p>
+<hr />
+<h2 id="api-rest">6. API REST</h2>
+<p>L’API respecte les conventions REST (noms de ressources au pluriel,
+verbes HTTP, codes de statut). Elle est entièrement documentée par
+<strong>Swagger UI</strong> (<code>/swagger-ui.html</code>).</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Ressource</th>
+<th>Endpoints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auth</td>
+<td><code>POST /api/auth/login</code>,
+<code>POST /api/auth/register</code></td>
+</tr>
+<tr>
+<td>Étudiants</td>
+<td><code>GET/POST/PUT/DELETE /api/etudiants</code>,
+<code>GET /api/etudiants/{id}/notes</code></td>
+</tr>
+<tr>
+<td>Enseignants</td>
+<td><code>GET/POST/PUT/DELETE /api/enseignants</code></td>
+</tr>
+<tr>
+<td>Filières</td>
+<td><code>GET/POST/PUT/DELETE /api/filieres</code></td>
+</tr>
+<tr>
+<td>Modules</td>
+<td><code>GET/POST/PUT/DELETE /api/modules</code></td>
+</tr>
+<tr>
+<td>Inscriptions</td>
+<td><code>GET/POST/DELETE /api/inscriptions</code></td>
+</tr>
+<tr>
+<td>Notes</td>
+<td><code>GET/POST/PUT/DELETE /api/notes</code></td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td><code>GET /api/dashboard/stats</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="frontend-1">7. Frontend</h2>
+<p>Le frontend est une <strong>Single Page Application</strong> :</p>
+<ul>
+<li><strong>Authentification</strong> : page de login, stockage du JWT
+dans <code>localStorage</code>, contexte React
+(<code>AuthContext</code>) partageant l’utilisateur courant.</li>
+<li><strong>Routes protégées</strong> : un composant
+<code>ProtectedRoute</code> redirige vers <code>/login</code> si
+l’utilisateur n’est pas connecté et masque/filtre les actions selon le
+rôle.</li>
+<li><strong>Client API</strong> : instance Axios avec intercepteurs
+(ajout automatique du token, déconnexion automatique sur réponse
+<code>401</code>).</li>
+<li><strong>Pages</strong> : tableau de bord (statistiques), et pages
+CRUD pour chaque ressource (tableaux + formulaires en modale).</li>
+</ul>
+<p>Pendant le développement, Vite <strong>proxifie</strong> les appels
+<code>/api</code> vers le backend (port 8080), ce qui évite tout
+problème de CORS.</p>
+<hr />
+<h2 id="déploiement-et-hébergement">8. Déploiement et hébergement</h2>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Hébergement recommandé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend (build statique)</td>
+<td>Sous-domaine o2switch, Netlify ou Vercel</td>
+</tr>
+<tr>
+<td>Backend (jar Java)</td>
+<td>Render, Railway ou Fly.io</td>
+</tr>
+<tr>
+<td>Base de données</td>
+<td>MySQL (o2switch) ou PostgreSQL géré</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ Un hébergement mutualisé PHP (type o2switch) ne peut pas exécuter
+une application Java : il convient pour le frontend statique, mais le
+backend doit être déployé sur une plateforme supportant la JVM.</p>
+</blockquote>
+<hr />
+<h2 id="conclusion">9. Conclusion</h2>
+<p>Ce projet a permis de mettre en œuvre les principaux modules de
+l’écosystème Spring (<strong>IoC / injection de dépendances</strong>,
+<strong>Spring MVC</strong>, <strong>Spring Data JPA</strong>,
+<strong>Spring Security</strong>) au sein d’une application réelle, et
+de les articuler avec un client moderne <strong>React /
+TypeScript</strong> consommant une API REST. Il illustre la comparaison
+entre l’approche Django (monolithique, full-stack Python) et l’approche
+Spring (backend Java découplé + SPA JavaScript).</p>
+<hr />
+<p><em>Comptes de démonstration : <code>admin/admin123</code>,
+<code>prof/prof123</code>, <code>etudiant/etud123</code>.</em></p>
+</body>
+</html>
