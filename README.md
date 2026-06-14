@@ -45,6 +45,15 @@ projet-scolarite/
 
 ## 🚀 Lancement en développement
 
+### Démarrage rapide (tout-en-un, macOS/Linux)
+
+```bash
+./start.sh
+```
+
+Ce script lance le backend puis le frontend, et affiche les URLs. `Ctrl+C` arrête les deux.
+Pour un lancement manuel (ou sous Windows), suivre les étapes ci-dessous.
+
 ### 1) Backend (port 8080)
 
 ```bash
