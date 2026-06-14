@@ -3,7 +3,7 @@ import axios from 'axios'
 // Instance Axios centralisee. La base '/api' est redirigee vers le backend
 // Spring Boot via le proxy Vite (cf. vite.config.ts).
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
 })
 
 // Intercepteur de requete : ajoute le token JWT s'il existe.
