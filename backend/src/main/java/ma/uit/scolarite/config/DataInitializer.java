@@ -16,7 +16,6 @@ import java.time.LocalDate;
  * Comptes : admin/admin123, prof/prof123, etudiant/etud123
  */
 @Component
-@Profile("!prod")
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
